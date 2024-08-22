@@ -1,1 +1,1 @@
-# Steam-Grid-Sync
+# Steam Grid Sync
