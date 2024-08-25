@@ -150,7 +150,7 @@ class SteamGrid:
             # backup the old image
             if os.path.exists(dest_path):
                 backup_path = os.path.join(self.STEAM_PATH, "originals")
-                shutil.copyfile(dest_path, backup_path)
+                shutil.move(dest_path, backup_path)
 
             shutil.copyfile(image_path, dest_path)
             msg = f"[secondary]Replaced[/] [secondary]{name}[/]'s {image_type} image - {app_id}"
