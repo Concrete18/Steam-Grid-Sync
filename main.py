@@ -101,10 +101,9 @@ class SteamGrid:
             return True
 
         try:
-            # TODO uncomment
-            # image_destination = self.STEAM_PATH / future_filename
-            # self.backup(image_destination)
-            # shutil.copyfile(steam_image.path, image_destination)
+            image_destination = self.STEAM_PATH / future_filename
+            self.backup(image_destination)
+            shutil.copyfile(steam_image.path, image_destination)
             msg = f"[secondary]Replaced[/] [secondary]{steam_image.name}[/]'s {steam_image.type} image - {steam_image.app_id}"
             self.console.print(msg)
         except PermissionError:
