@@ -1,9 +1,11 @@
 # standard library
-import os, shutil, configparser
+import os, sys, shutil, subprocess, configparser
 
 # third-party imports
 from rich.console import Console
 from rich.theme import Theme
+from PIL import Image
+from pick import pick
 
 # local imports
 from utils.utils import *
@@ -41,6 +43,20 @@ class SteamGrid:
         ph
         """
         return os.path.exists(self.STEAM_PATH)
+
+    def get_image_type(filepath):
+        """
+        ph
+        """
+        # TODO finish get_image_type
+        img = Image.open(filepath)
+        width = img.width
+        height = img.height
+
+        if width == 600 and height == 900:
+            return "grid"
+        elif width == 600 and height == 900:
+            return "grid"
 
     def get_image_data(self, image_filename):
         """
@@ -107,7 +123,7 @@ class SteamGrid:
 
     def images_are_identical(self, image1, image2):
         """
-        Compares images by hash
+        Compares images by hash.
         """
         if not os.path.exists(image1) or not os.path.exists(image2):
             return False
@@ -115,18 +131,26 @@ class SteamGrid:
         image2_hash = hash_image(image2)
         return image1_hash == image2_hash
 
-    def backup_old_image(self, dest_path):
+    def backup(self, dest_path: str) -> None:
         """
         ph
         """
-        backup_path = os.path.join(self.STEAM_PATH, "originals")
-        if os.path.exists(backup_path):
-            if self.images_are_identical(backup_path, dest_path):
-                return
+        path, original_ext = os.path.splitext(dest_path)
+        possible_file_exts = ["jpg", "png"]
+        if original_ext not in possible_file_exts:
+            possible_file_exts.append(original_ext)
+        for file_ext in possible_file_exts:
+            new_path = f"{path}.{file_ext}"
+            if os.path.exists(new_path):
+                backup_path = os.path.join(self.STEAM_PATH, "originals")
+                if os.path.exists(dest_path):
+                    if not self.images_are_identical(new_path, dest_path):
+                        shutil.move(new_path, backup_path)
+                print(f"Backed up {new_path} to {backup_path}")
+            else:
+                print("Backup already exists")
 
-        shutil.copyfile(dest_path, backup_path)
-
-    def change_steam_hero_image(self, image):
+    def change_steam_hero_image(self, image: dict[str, int, str, str]):
         name = image["name"]
         app_id = image["app_id"]
         image_path = image["path"]
@@ -139,18 +163,16 @@ class SteamGrid:
         dest_exists = os.path.exists(dest_path)
         new_image_exists = os.path.exists(image_path)
         if not dest_exists and not new_image_exists:
-            return
+            return False
 
         if self.images_are_identical(image_path, dest_path):
             msg = f"[info]Skipped[/] [secondary]{name}[/]'s {image_type} image as it is identical - {app_id}"
             self.console.print(msg)
-            return
+            return True
 
         try:
             # backup the old image
-            if os.path.exists(dest_path):
-                backup_path = os.path.join(self.STEAM_PATH, "originals")
-                shutil.move(dest_path, backup_path)
+            self.backup(dest_path)
 
             shutil.copyfile(image_path, dest_path)
             msg = f"[secondary]Replaced[/] [secondary]{name}[/]'s {image_type} image - {app_id}"
@@ -178,11 +200,63 @@ class SteamGrid:
             msg = f"\nImages failed to Update/Backup {failures} times\nTry closing Steam and try again"
             print(msg)
 
-        input("\nSteam Grid Sync Complete\nRestart Steam to see changes")
+        print("\nSteam Grid Sync Complete\nRestart Steam to see changes")
 
-        # TODO delete unisted images
+    @staticmethod
+    def advanced_picker(choices: list[tuple], prompt: str) -> list:
+        """
+        Choice picker using the advanced and less compatible Pick module.
+        """
+        options = [choice[0] for choice in choices]
+        selected_index = pick(options, prompt, indicator="->")[1]
+        return choices[selected_index]
+
+    def pick_task(self, choices: list[tuple], repeat: bool = True) -> None:
+        """
+        Allows picking a task using Arrow Keys and Enter.
+        """
+        if not sys.stdout.isatty():
+            # runs if it is not an interactable terminal
+            print("\nSkipping Task Picker.\nInput can't be used")
+            return
+        input("\nPress Enter to Pick Next Action:")
+        PROMPT = "What do you want to do? (Use Arrow Keys and Enter):"
+        selected = self.advanced_picker(choices, PROMPT)
+        if selected:
+            name, func = selected[0], selected[1]
+            msg = f"\n[b underline]{name}[/] Selected"
+            self.console.print(msg, highlight=False)
+            func()
+            if "exit" in name.lower():
+                return
+            if repeat:
+                self.pick_task(choices, repeat)
+
+    def open_custom_grid_folder(self):
+        print(f"Opening Directory | {self.GRID_IMAGE_PATH}")
+        subprocess.Popen(f'explorer "{self.GRID_IMAGE_PATH}"')
+
+    def open_steam_grid_folder(self):
+        print(f"Opening Directory | {self.STEAM_PATH}")
+        subprocess.Popen(f'explorer "{self.STEAM_PATH}"')
+
+    def game_library_actions(self) -> None:
+        """
+        Gives a choice of actions for the current game library.
+        """
+        choices = [
+            ("Exit", exit),
+            ("Open Custom Grid Image Folder", self.open_custom_grid_folder),
+            ("Open Steam Grid Image Folder", self.open_steam_grid_folder),
+        ]
+        self.pick_task(choices)
+        exit()
+
+    def main(self):
+        self.sync()
+        self.game_library_actions()
 
 
 if __name__ == "__main__":
     grid = SteamGrid()
-    grid.sync()
+    grid.main()
