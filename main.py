@@ -95,7 +95,7 @@ class SteamGrid:
         if not steam_image.path.exists() and not future_filename.exists():
             return False
 
-        if steam_image.hash() == hash_image(future_destination):
+        if steam_image.is_identical_to(future_destination):
             msg = f"[info]Skipped[/] [secondary]{steam_image.name}[/]'s {steam_image.type} identical image - {steam_image.app_id}"
             self.console.print(msg)
             return True

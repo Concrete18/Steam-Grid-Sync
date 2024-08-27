@@ -1,7 +1,9 @@
 # standard library
 from dataclasses import dataclass, field, fields
 from pathlib import Path
-import hashlib
+
+# local imports
+from utils.utils import *
 
 
 @dataclass
@@ -31,10 +33,10 @@ class Image:
         self.app_id = int(image_parts[2])
 
     def __bool__(self):
-        return bool(self.name and self.type and self.app_id and self.path)
+        return bool(self.name and self.type and self.app_id and self.path.exists())
 
     def __eq__(self, other):
-        if not self.path.exists() or not other.exist():
+        if not self.path.exists() or not other.exists():
             return False
         return self.hash() == other.hash()
 
@@ -52,18 +54,24 @@ class Image:
         """
         Returns the images sha256 hash.
         """
-        with self.path.open("rb") as f:
-            return hashlib.sha256(f.read()).hexdigest()
+        return hash_image(self.path)
 
-    def exists(self):
+    def is_identical_to(self, image_path: Path | str) -> bool:
+        """
+        Determines if the current image is identical to another image at `image_path` based on their hash values.
+        """
+        return self.hash() == hash_image(image_path)
+
+    def exists(self) -> bool:
         """
         Whether this path exists.
         """
         return self.path.exists()
 
-    def create_filename(self) -> "Image":
+    def create_filename(self) -> Path:
         """
-        ph
+        Creates the new filename for the Steam image so it
+        is ready to be used by the Steam App.
         """
         match self.type:
             case "hero":
@@ -72,19 +80,8 @@ class Image:
                 filename = f"{self.app_id}_logo{self.path.suffix}"
             case "grid":
                 filename = f"{self.app_id}p{self.path.suffix}"
-            case _:
+            case "active":
                 filename = f"{self.app_id}{self.path.suffix}"
+            case _:
+                return None
         return Path(filename)
-
-
-if __name__ == "__main__":
-    path = Path("tests/test_images/Team Fortress 2_grid_440.png")
-    grid_image = Image(path=path)
-
-    print(grid_image)
-
-    hash = grid_image.hash()
-    print(hash)
-
-    future_path = grid_image.create_filename()
-    print(future_path)
