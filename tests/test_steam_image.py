@@ -58,7 +58,12 @@ class TestCreateFilename:
         test_path = "tests/test_images/Hitman 3_grid_1659040.jpg"
         grid_image = Image(path=test_path)
 
+        new_filename = grid_image.create_filename()
         assert grid_image.create_filename() == Path("1659040p.jpg")
+        assert isinstance(new_filename, Path)
+
+        destination = "tests/test_images/" / new_filename
+        assert isinstance(destination, Path)
 
     def test_create_hero(self):
         test_path = "tests/test_images/Hitman 3_hero_1659040.jpg"
@@ -83,3 +88,39 @@ class TestCreateFilename:
         grid_image = Image(path=test_path)
 
         assert grid_image.create_filename() is None
+
+
+class TestUpdateSteamImage:
+
+    def test_new_image(self, mocker):
+
+        test_path = "tests/test_images/Hitman 3_hero_1659040.jpg"
+        steam_image = Image(path=test_path)
+
+        mocker.patch("shutil.copyfile", return_value=None)
+        mocker.patch("utils.steam_image.Image.backup", return_value=None)
+        steam_grid_path = "tests/test_destination"
+        success = steam_image.update_steam_image(steam_grid_path)
+        assert success
+
+    def test_replace_image(self, mocker):
+
+        test_path = "tests/test_images/Hitman 3_hero_1659040.jpg"
+        steam_image = Image(path=test_path)
+
+        mocker.patch("shutil.copyfile", return_value=None)
+        mocker.patch("utils.steam_image.Image.backup", return_value=None)
+        steam_grid_path = "tests/test_destination"
+        success = steam_image.update_steam_image(steam_grid_path)
+        assert success
+
+    def test_identical_image(self, mocker):
+
+        test_path = "tests/test_images/Hitman 3_grid_1659040.jpg"
+        steam_image = Image(path=test_path)
+
+        mocker.patch("shutil.copyfile", return_value=None)
+        mocker.patch("utils.steam_image.Image.backup", return_value=None)
+        steam_grid_path = "tests/test_destination"
+        success = steam_image.update_steam_image(steam_grid_path)
+        assert not success

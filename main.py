@@ -1,16 +1,29 @@
 # standard library
-import os, sys, shutil, subprocess, configparser
+import os, sys, subprocess, configparser
 from pathlib import Path
 
 # third-party imports
 from rich.console import Console
 from rich.theme import Theme
-
 from pick import pick
 
 # local imports
 from utils.utils import *
 from utils.steam_image import Image
+
+
+# rich console
+custom_theme = Theme(
+    {
+        "primary": "bold deep_sky_blue1",
+        "secondary": "bold pale_turquoise1",
+        # error
+        "info": "dim cyan",
+        "warning": "bold magenta",
+        "danger": "bold red",
+    }
+)
+console = Console(theme=custom_theme)
 
 
 class SteamGrid:
@@ -25,34 +38,15 @@ class SteamGrid:
     STEAM_PATH_OVERRIDE = cfg.get("Overrides", "STEAM_PATH")
 
     if STEAM_PATH_OVERRIDE:
-        STEAM_PATH = Path(STEAM_PATH_OVERRIDE)
+        steam_grid_path = Path(STEAM_PATH_OVERRIDE)
     else:
-        STEAM_PATH = Path(
+        steam_grid_path = Path(
             f"C:/Program Files (x86)/Steam/userdata/{STEAM_ID_3}/config/grid"
         )
 
-    # rich console
-    custom_theme = Theme(
-        {
-            "primary": "bold deep_sky_blue1",
-            "secondary": "bold pale_turquoise1",
-            # error
-            "info": "dim cyan",
-            "warning": "bold magenta",
-            "danger": "bold red",
-        }
-    )
-    console = Console(theme=custom_theme)
-
-    def verify_steam_paths(self):
+    def get_images(self) -> list[Image]:
         """
-        ph
-        """
-        return os.path.exists(self.STEAM_PATH)
-
-    def get_images(self) -> list[dict[str, int, str, str]]:
-        """
-        ph
+        Gets custom Steam Grid Image from Grid image path.
         """
         print("\nGetting Images")
 
@@ -66,64 +60,25 @@ class SteamGrid:
         print(f"{len(image_dicts)} Valid Images Found\n")
         return image_dicts
 
-    def backup(self, dest_path: str) -> None:
-        """
-        ph
-        """
-        path, original_ext = os.path.splitext(dest_path)
-        possible_file_exts = ["jpg", "png"]
-        if original_ext not in possible_file_exts:
-            possible_file_exts.append(original_ext)
-        for file_ext in possible_file_exts:
-            new_path = f"{path}.{file_ext}"
-            if os.path.exists(new_path):
-                backup_path = os.path.join(self.STEAM_PATH, "originals")
-                if os.path.exists(dest_path):
-                    if not self.images_are_identical(new_path, dest_path):
-                        shutil.move(new_path, backup_path)
-                print(f"Backed up {new_path} to {backup_path}")
-            else:
-                print("Backup already exists")
-
-    def change_steam_hero_image(self, steam_image: Image):
-        """
-        ph
-        """
-        future_filename = steam_image.create_filename()
-        future_destination = self.STEAM_PATH / future_filename
-
-        if not steam_image.path.exists() and not future_filename.exists():
-            return False
-
-        if steam_image.is_identical_to(future_destination):
-            msg = f"[info]Skipped[/] [secondary]{steam_image.name}[/]'s {steam_image.type} identical image - {steam_image.app_id}"
-            self.console.print(msg)
-            return True
-
-        try:
-            image_destination = self.STEAM_PATH / future_filename
-            self.backup(image_destination)
-            shutil.copyfile(steam_image.path, image_destination)
-            msg = f"[secondary]Replaced[/] [secondary]{steam_image.name}[/]'s {steam_image.type} image - {steam_image.app_id}"
-            self.console.print(msg)
-        except PermissionError:
-            msg = f"[danger]Failed[/] [secondary]{steam_image.name}[/]'s image Update/Backup"
-            self.console.print(msg)
-            return False
-        return True
-
     def sync(self):
         """
-        ph
+        Syncs all the Steam Grid Images into the Grid folder.
         """
-        self.console.print("Starting Steam Grid Sync", style="primary")
+        console.print("Starting Steam Grid Sync", style="primary")
 
         valid_images = self.get_images()
 
+        if not self.steam_grid_path.exists():
+            input("Can't run sync, Steam Grid Directory does not exist.")
+            return
+
         failures = 0
         for img in valid_images:
-            success = self.change_steam_hero_image(img)
-            if not success:
+            if img:
+                success = img.update_steam_image(self.steam_grid_path)
+                if not success:
+                    failures += 1
+            else:
                 failures += 1
         if failures:
             msg = f"\nImages failed to Update/Backup {failures} times\nTry closing Steam and try again"
@@ -154,7 +109,7 @@ class SteamGrid:
         if selected:
             name, func = selected[0], selected[1]
             msg = f"\n[b underline]{name}[/] Selected"
-            self.console.print(msg, highlight=False)
+            console.print(msg, highlight=False)
             func()
             if "exit" in name.lower():
                 return
@@ -166,8 +121,8 @@ class SteamGrid:
         subprocess.Popen(f'explorer "{self.GRID_IMAGE_PATH}"')
 
     def open_steam_grid_folder(self):
-        print(f"Opening Directory | {self.STEAM_PATH}")
-        subprocess.Popen(f'explorer "{self.STEAM_PATH}"')
+        print(f"Opening Directory | {self.steam_grid_path}")
+        subprocess.Popen(f'explorer "{self.steam_grid_path}"')
 
     def game_library_actions(self) -> None:
         """
