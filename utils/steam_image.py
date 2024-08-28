@@ -138,8 +138,8 @@ class Image:
             return False
 
         try:
-            # self.backup(destination, steam_grid_path)
-            # shutil.copyfile(self.path, destination)
+            self.backup(destination, steam_grid_path)
+            shutil.copyfile(self.path, destination)
             msg = f"[secondary]Replaced[/] [secondary]{self.name}[/]'s {self.type} image - {self.app_id}"
             console.print(msg)
         except PermissionError:
