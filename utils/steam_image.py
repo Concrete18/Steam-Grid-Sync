@@ -77,8 +77,6 @@ class Image:
         """
         Determines if the current image is identical to another image at `image_path` based on their hash values.
         """
-        if not image_path.exists():
-            return False
         return self.hash() == hash_file(image_path)
 
     def exists(self) -> bool:
