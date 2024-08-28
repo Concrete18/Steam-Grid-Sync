@@ -133,7 +133,7 @@ class Image:
             return None
 
         if self.is_identical_to(destination):
-            msg = f"[info]Skipped[/] [secondary]{self.name}[/]'s {self.type} identical image - {self.app_id}"
+            msg = f"[info]Skipped[/] [secondary]{self.name}[/]'s {self.type} image is identical - {self.app_id}"
             console.print(msg)
             return False
 
