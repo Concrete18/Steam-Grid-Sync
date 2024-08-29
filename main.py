@@ -1,5 +1,5 @@
 # standard library
-import os, sys, subprocess, configparser
+import os, sys, shutil, subprocess, configparser
 from pathlib import Path
 
 # third-party imports
@@ -15,8 +15,10 @@ from utils.steam_image import Image
 # rich console
 custom_theme = Theme(
     {
-        "primary": "bold deep_sky_blue1",
-        "secondary": "bold pale_turquoise1",
+        "prim": "bold deep_sky_blue1",
+        "sec": "bold pale_turquoise1",
+        "pass": "bold green",
+        "skip": "dim cyan",
         # error
         "info": "dim cyan",
         "warning": "bold magenta",
@@ -31,60 +33,90 @@ class SteamGrid:
     cfg = configparser.ConfigParser()
     cfg.read("config.ini")
 
-    STEAM_ID_3 = cfg.get("Settings", "STEAM_ID_3")
-    GRID_IMAGE_PATH = cfg.get("Settings", "GRID_IMAGE_PATH")
-    if GRID_IMAGE_PATH:
-        GRID_IMAGE_PATH = Path(GRID_IMAGE_PATH)
-    STEAM_PATH_OVERRIDE = cfg.get("Overrides", "STEAM_PATH")
+    steam_id_3 = cfg.get("Settings", "STEAM_ID_3")
+    custom_grid_path = cfg.get("Settings", "CUSTOM_GRID_PATH")
+    steam_folder = cfg.get("Settings", "STEAM_FOLDER")
 
-    if STEAM_PATH_OVERRIDE:
-        steam_grid_path = Path(STEAM_PATH_OVERRIDE)
+    if custom_grid_path:
+        custom_grid_path = Path(custom_grid_path)
+    steam_grid_path_override = cfg.get("Overrides", "STEAM_GRID_PATH")
+
+    if steam_grid_path_override:
+        steam_grid_path = Path(steam_grid_path_override)
     else:
-        steam_grid_path = Path(
-            f"C:/Program Files (x86)/Steam/userdata/{STEAM_ID_3}/config/grid"
-        )
+        steam_grid_path = Path(f"{steam_folder}/userdata/{steam_id_3}/config/grid")
 
     def get_images(self) -> list[Image]:
         """
         Gets custom Steam Grid Image from Grid image path.
         """
-        print("\nGetting Images")
+        print("\nGetting Valid Images\n")
 
-        image_dicts = []
-        for image_path in os.listdir(self.GRID_IMAGE_PATH):
-            steam_image = Image(self.GRID_IMAGE_PATH / image_path)
-            if steam_image:
-                image_dicts.append(steam_image)
-            else:
+        valid_images = []
+        for image_name in os.listdir(self.custom_grid_path):
+            image_path = self.custom_grid_path / image_name
+            steam_image = Image(image_path, self.steam_grid_path)
+
+            if not steam_image.path.exists():
+                msg = f"[warning]Missing[/] [sec]{steam_image.name}[/] does not exist - {steam_image.app_id}"
+                console.print(msg)
                 continue
-        print(f"{len(image_dicts)} Valid Images Found\n")
-        return image_dicts
 
-    def sync(self):
+            if steam_image.is_identical_to_destination():
+                msg = f"[skip]Skipped[/] [sec]{steam_image.name}[/]'s {steam_image.type.upper()} image is identical - {steam_image.app_id}"
+                console.print(msg)
+                continue
+
+            if steam_image:
+                valid_images.append(steam_image)
+
+        return valid_images
+
+    def update_images(self, images_to_update: list[Image]):
+        for img in images_to_update:
+            try:
+                img.update()
+                msg = f"[pass]Replaced[/] [sec]{img.name}[/]'s {img.type.upper()} image - {img.app_id}"
+            except PermissionError:
+                msg = f"[danger]Failed[/] to update [sec]{img.name}[/]'s image - {img.app_id}"
+            console.print(msg)
+
+    def sync(self) -> None:
         """
         Syncs all the Steam Grid Images into the Grid folder.
         """
-        console.print("Starting Steam Grid Sync", style="primary")
-
-        valid_images = self.get_images()
+        console.print("Starting Steam Grid Sync", style="prim")
 
         if not self.steam_grid_path.exists():
             input("Can't run sync, Steam Grid Directory does not exist.")
             return
 
-        failures = 0
-        for img in valid_images:
-            if img:
-                success = img.update_steam_image(self.steam_grid_path)
-                if not success:
-                    failures += 1
-            else:
-                failures += 1
-        if failures:
-            msg = f"\nImages failed to Update/Backup {failures} times\nTry closing Steam and try again"
+        images_to_update = self.get_images()
+
+        if not images_to_update:
+            console.print("\nNo updates needed\nSteam Grid Sync complete")
+            return
+
+        update_total = len(images_to_update)
+
+        if update_total == 0:
+            print("No images to update")
+            return
+
+        msg = f"\n{update_total} Image{' is' if update_total == 1 else 's are'} ready to be updated"
+
+        if update_total <= 10:
+            print(msg)
+            for img in images_to_update:
+                print(f"{img.name} - {img.type.upper()}")
+        else:
             print(msg)
 
-        print("\nSteam Grid Sync Complete\nRestart Steam to see changes")
+        input("\nPress Enter to start the update...\n")
+
+        self.update_images(images_to_update)
+
+        print("\nSteam Grid Sync Complete\nRestart Steam if you don't see changes")
 
     @staticmethod
     def advanced_picker(choices: list[tuple], prompt: str) -> list:
@@ -117,12 +149,14 @@ class SteamGrid:
                 self.pick_task(choices, repeat)
 
     def open_custom_grid_folder(self):
-        print(f"Opening Directory | {self.GRID_IMAGE_PATH}")
-        subprocess.Popen(f'explorer "{self.GRID_IMAGE_PATH}"')
+        print(f"Opening Directory | {self.custom_grid_path}")
+        subprocess.Popen(f'explorer "{self.custom_grid_path}"')
 
     def open_steam_grid_folder(self):
         print(f"Opening Directory | {self.steam_grid_path}")
         subprocess.Popen(f'explorer "{self.steam_grid_path}"')
+
+    # TODO make a new option that will auto format games images in the custom grid image folder
 
     def game_library_actions(self) -> None:
         """
@@ -137,8 +171,11 @@ class SteamGrid:
         exit()
 
     def main(self):
-        self.sync()
-        self.game_library_actions()
+        try:
+            self.sync()
+            self.game_library_actions()
+        except EOFError or KeyboardInterrupt:
+            pass
 
 
 if __name__ == "__main__":
