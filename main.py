@@ -10,6 +10,7 @@ from rich.theme import Theme
 from utils.utils import *
 from utils.steam_image import Image
 from utils.action_picker import ActionPicker
+from utils.add_image import add_image
 
 # rich console
 custom_theme = Theme(
@@ -46,6 +47,8 @@ class SteamGrid(ActionPicker):
     else:
         steam_grid_path = Path(f"{steam_folder}/userdata/{steam_id_3}/config/grid")
 
+    failure = False
+
     @staticmethod
     def info_print(image: Image, action_type: str):
         """
@@ -56,6 +59,7 @@ class SteamGrid(ActionPicker):
             "updated": ("UPDATED", "pass", "image has been updated"),
             "skip": ("SKIPPED", "skip", "image has been skipped"),
             "missing": ("MISSING", "warning", "image does not exist"),
+            "format": ("FAILED", "warning", "format is wrong"),
         }
         action, format_type, info = actions.get(
             action_type, ("FAILED", "danger", "image update failed")
@@ -75,7 +79,7 @@ class SteamGrid(ActionPicker):
 
     def get_images(self) -> list[Image]:
         """
-        Gets custom Steam Grid Image from Grid image path.
+        Gets custom Steam Grid image from Grid image path.
         """
         print("\nGetting Valid Images\n")
 
@@ -84,16 +88,21 @@ class SteamGrid(ActionPicker):
             image_path = self.custom_grid_path / image_name
             steam_image = Image(image_path, self.steam_grid_path)
 
+            if not steam_image:
+                self.info_print(steam_image, "format")
+                self.failure = True
+                continue
+
             if not steam_image.path.exists():
                 self.info_print(steam_image, "missing")
+                self.failure = True
                 continue
 
             if steam_image.is_identical_to_destination():
                 self.info_print(steam_image, "skip")
                 continue
 
-            if steam_image:
-                valid_images.append(steam_image)
+            valid_images.append(steam_image)
 
         return valid_images
 
@@ -104,6 +113,7 @@ class SteamGrid(ActionPicker):
                 self.info_print(img, "updated")
             except PermissionError:
                 self.info_print(img, "failure")
+                self.failure = True
 
     def sync(self) -> None:
         """
@@ -116,6 +126,12 @@ class SteamGrid(ActionPicker):
             return
 
         images_to_update = self.get_images()
+
+        if self.failure:
+            print("\nAn error occured")
+            msg = "Do you want to open the Custom Grid Folder to fix it."
+            if ask_for_yes_or_no(msg):
+                self.open_folder(self.custom_grid_path)
 
         if not images_to_update:
             console.print("\nNo updates needed\nSteam Grid Sync complete")
@@ -141,14 +157,29 @@ class SteamGrid(ActionPicker):
 
     # TODO make a new option that will auto format games images in the custom grid image folder
 
+    def add_images(self):
+        """
+        Allows adding multiple new Steam Grid images.
+        """
+        while True:
+            add_image(self.custom_grid_path)
+            msg = "\nDo you want to add another image?\n"
+            if not ask_for_yes_or_no(msg):
+                break
+        self.sync()
+
     def game_library_actions(self) -> None:
         """
         Gives a choice of actions for the current game library.
         """
         open_custom_grid_folder = lambda: self.open_folder(self.custom_grid_path)
         open_steam_grid_folder = lambda: self.open_folder(self.steam_grid_path)
+        add_image_to_custom = lambda: add_image(self.custom_grid_path)
+
         choices = [
             ("Exit", exit),
+            ("Add New Steam Grid Image", add_image_to_custom),
+            ("Rerun Sync", self.sync),
             ("Open Custom Grid Image Folder", open_custom_grid_folder),
             ("Open Steam Grid Image Folder", open_steam_grid_folder),
         ]

@@ -22,7 +22,8 @@ class Image:
 
         image_parts = self.path.stem.split("_")
         if len(image_parts) != 3:
-            print(f"\n{self.path.stem} is in wrong format")
+            self.name = self.path.stem
+            self.type = "image"
             return {}
 
         self.name = image_parts[0]
@@ -90,7 +91,7 @@ class Image:
 
     def update(self):
         """
-        Deletes the current Steam Grid Image and copies the new one to that location.
+        Deletes the current Steam Grid image and copies the new one to that location.
         """
         # deletes the any files that need to be replaced
         paths = Path(self.steam_grid_path).glob(f"{self.destination.stem}.*")
