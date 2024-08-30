@@ -1,16 +1,15 @@
 # standard library
-import os, sys, subprocess, configparser
+import os, configparser
 from pathlib import Path
 
 # third-party imports
 from rich.console import Console
 from rich.theme import Theme
-from pick import pick
 
 # local imports
 from utils.utils import *
 from utils.steam_image import Image
-
+from utils.action_picker import ActionPicker
 
 # rich console
 custom_theme = Theme(
@@ -29,7 +28,7 @@ custom_theme = Theme(
 console = Console(theme=custom_theme)
 
 
-class SteamGrid:
+class SteamGrid(ActionPicker):
 
     cfg = configparser.ConfigParser()
     cfg.read("config.ini")
@@ -53,7 +52,7 @@ class SteamGrid:
         Prints formatted information about the image action status.
         """
         actions = {
-            "ready": ("QUEUED", "queue", "image queued for update"),
+            "queued": ("QUEUED", "queue", "image queued for update"),
             "updated": ("UPDATED", "pass", "image has been updated"),
             "skip": ("SKIPPED", "skip", "image has been skipped"),
             "missing": ("MISSING", "warning", "image does not exist"),
@@ -68,7 +67,7 @@ class SteamGrid:
     def info_print_tester(self):
         image_path = "tests/test_images/Hitman 3_grid_1659040.jpg"
         image = Image(image_path, self.steam_grid_path)
-        self.info_print(image, "ready")
+        self.info_print(image, "queued")
         self.info_print(image, "updated")
         self.info_print(image, "skip")
         self.info_print(image, "missing")
@@ -123,59 +122,22 @@ class SteamGrid:
             return
 
         update_total = len(images_to_update)
-
         if update_total == 0:
             print("No images to update")
             return
-
         msg = f"\n{update_total} Image{' is' if update_total == 1 else 's are'} queued for update\n"
         if update_total <= 10:
             print(msg)
             for img in images_to_update:
-                self.info_print(img, "ready")
+                self.info_print(img, "queued")
         else:
             print(msg)
 
-        input("\nPress Enter to start the update...\n")
+        input("\nPress Enter to start the update\n")
 
         self.update_images(images_to_update)
 
         print("\nSteam Grid Sync Complete\nRestart Steam if you don't see changes")
-
-    @staticmethod
-    def advanced_picker(choices: list[tuple], prompt: str) -> list:
-        """
-        Choice picker using the advanced and less compatible Pick module.
-        """
-        options = [choice[0] for choice in choices]
-        selected_index = pick(options, prompt, indicator="->")[1]
-        return choices[selected_index]
-
-    def pick_task(self, choices: list[tuple], repeat: bool = True) -> None:
-        """
-        Allows picking a task using Arrow Keys and Enter.
-        """
-        if not sys.stdout.isatty():
-            # runs if it is not an interactable terminal
-            print("\nSkipping Task Picker.\nInput can't be used")
-            return
-        input("\nPress Enter to Pick Next Action:")
-        PROMPT = "What do you want to do? (Use Arrow Keys and Enter):"
-        selected = self.advanced_picker(choices, PROMPT)
-        if selected:
-            name, func = selected[0], selected[1]
-            msg = f"\n[b underline]{name}[/] Selected"
-            console.print(msg, highlight=False)
-            func()
-            if "exit" in name.lower():
-                return
-            if repeat:
-                self.pick_task(choices, repeat)
-
-    @staticmethod
-    def open_folder(folder: Path) -> None:
-        print(f"\nOpening Directory | {folder}")
-        subprocess.Popen(f'explorer "{folder}"')
 
     # TODO make a new option that will auto format games images in the custom grid image folder
 
