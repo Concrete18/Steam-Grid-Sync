@@ -55,8 +55,7 @@ class Image:
 
     def create_destination(self) -> Path:
         """
-        Creates the new filename for the Steam Grid image so it
-        is ready to be used by the Steam App.
+        Creates the new filename for the Steam Grid image so it is ready to be used by the Steam App.
         """
         match self.type:
             case "hero":

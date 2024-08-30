@@ -1,5 +1,5 @@
 # standard library
-import os, sys, shutil, subprocess, configparser
+import os, sys, subprocess, configparser
 from pathlib import Path
 
 # third-party imports
@@ -17,6 +17,7 @@ custom_theme = Theme(
     {
         "prim": "bold deep_sky_blue1",
         "sec": "bold pale_turquoise1",
+        "queue": "bold dark_green",
         "pass": "bold green",
         "skip": "dim cyan",
         # error
@@ -46,6 +47,33 @@ class SteamGrid:
     else:
         steam_grid_path = Path(f"{steam_folder}/userdata/{steam_id_3}/config/grid")
 
+    @staticmethod
+    def info_print(image: Image, action_type: str):
+        """
+        Prints formatted information about the image action status.
+        """
+        actions = {
+            "ready": ("QUEUED", "queue", "image queued for update"),
+            "updated": ("UPDATED", "pass", "image has been updated"),
+            "skip": ("SKIPPED", "skip", "image has been skipped"),
+            "missing": ("MISSING", "warning", "image does not exist"),
+        }
+        action, format_type, info = actions.get(
+            action_type, ("FAILED", "danger", "image update failed")
+        )
+
+        msg = f"[{format_type}]{action.ljust(7)}[/] [sec]{image.name}[/]'s {image.type.upper()} {info} - {image.app_id}"
+        console.print(msg)
+
+    def info_print_tester(self):
+        image_path = "tests/test_images/Hitman 3_grid_1659040.jpg"
+        image = Image(image_path, self.steam_grid_path)
+        self.info_print(image, "ready")
+        self.info_print(image, "updated")
+        self.info_print(image, "skip")
+        self.info_print(image, "missing")
+        self.info_print(image, "failure")
+
     def get_images(self) -> list[Image]:
         """
         Gets custom Steam Grid Image from Grid image path.
@@ -58,13 +86,11 @@ class SteamGrid:
             steam_image = Image(image_path, self.steam_grid_path)
 
             if not steam_image.path.exists():
-                msg = f"[warning]Missing[/] [sec]{steam_image.name}[/] does not exist - {steam_image.app_id}"
-                console.print(msg)
+                self.info_print(steam_image, "missing")
                 continue
 
             if steam_image.is_identical_to_destination():
-                msg = f"[skip]Skipped[/] [sec]{steam_image.name}[/]'s {steam_image.type.upper()} image is identical - {steam_image.app_id}"
-                console.print(msg)
+                self.info_print(steam_image, "skip")
                 continue
 
             if steam_image:
@@ -76,10 +102,9 @@ class SteamGrid:
         for img in images_to_update:
             try:
                 img.update()
-                msg = f"[pass]Replaced[/] [sec]{img.name}[/]'s {img.type.upper()} image - {img.app_id}"
+                self.info_print(img, "updated")
             except PermissionError:
-                msg = f"[danger]Failed[/] to update [sec]{img.name}[/]'s image - {img.app_id}"
-            console.print(msg)
+                self.info_print(img, "failure")
 
     def sync(self) -> None:
         """
@@ -103,12 +128,11 @@ class SteamGrid:
             print("No images to update")
             return
 
-        msg = f"\n{update_total} Image{' is' if update_total == 1 else 's are'} ready to be updated"
-
+        msg = f"\n{update_total} Image{' is' if update_total == 1 else 's are'} queued for update\n"
         if update_total <= 10:
             print(msg)
             for img in images_to_update:
-                print(f"{img.name} - {img.type.upper()}")
+                self.info_print(img, "ready")
         else:
             print(msg)
 
@@ -148,13 +172,10 @@ class SteamGrid:
             if repeat:
                 self.pick_task(choices, repeat)
 
-    def open_custom_grid_folder(self):
-        print(f"Opening Directory | {self.custom_grid_path}")
-        subprocess.Popen(f'explorer "{self.custom_grid_path}"')
-
-    def open_steam_grid_folder(self):
-        print(f"Opening Directory | {self.steam_grid_path}")
-        subprocess.Popen(f'explorer "{self.steam_grid_path}"')
+    @staticmethod
+    def open_folder(folder: Path) -> None:
+        print(f"\nOpening Directory | {folder}")
+        subprocess.Popen(f'explorer "{folder}"')
 
     # TODO make a new option that will auto format games images in the custom grid image folder
 
@@ -162,10 +183,12 @@ class SteamGrid:
         """
         Gives a choice of actions for the current game library.
         """
+        open_custom_grid_folder = lambda: self.open_folder(self.custom_grid_path)
+        open_steam_grid_folder = lambda: self.open_folder(self.steam_grid_path)
         choices = [
             ("Exit", exit),
-            ("Open Custom Grid Image Folder", self.open_custom_grid_folder),
-            ("Open Steam Grid Image Folder", self.open_steam_grid_folder),
+            ("Open Custom Grid Image Folder", open_custom_grid_folder),
+            ("Open Steam Grid Image Folder", open_steam_grid_folder),
         ]
         self.pick_task(choices)
         exit()
@@ -179,6 +202,5 @@ class SteamGrid:
 
 
 if __name__ == "__main__":
-
     grid = SteamGrid()
     grid.main()
