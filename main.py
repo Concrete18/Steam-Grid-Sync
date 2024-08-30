@@ -155,8 +155,6 @@ class SteamGrid(ActionPicker):
 
         print("\nSteam Grid Sync Complete\nRestart Steam if you don't see changes")
 
-    # TODO make a new option that will auto format games images in the custom grid image folder
-
     def add_images(self):
         """
         Allows adding multiple new Steam Grid images.
