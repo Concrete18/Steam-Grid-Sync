@@ -4,6 +4,12 @@ import shutil
 import tkinter as tk
 from tkinter import filedialog
 
+# third-party imports
+from pick import pick
+
+# local imports
+from utils.action_picker import advanced_picker
+
 
 def get_file_path() -> Path:
     root = tk.Tk()
@@ -33,8 +39,16 @@ def add_image(custom_grid_image_dir: Path) -> None:
     """
     target = get_file_path()
     steam_url = input("\nWhat is the Steam Game URL?\n")
-    image_type = input("\nWhat type of Steam Grid image is this image?\n")
-    filename = create_filename(steam_url, image_type, target.suffix)
+
+    IMAGE_TYPES = ["Grid", "Hero", "Logo", "Active"]
+    index = pick(
+        IMAGE_TYPES,
+        "What type of Steam Grid image is this image?",
+        indicator="->",
+    )[1]
+
+    filename = create_filename(steam_url, IMAGE_TYPES[index].lower(), target.suffix)
     destination = custom_grid_image_dir / filename
+
     shutil.move(target, destination)
-    print("\nNew Steam GridImage Added")
+    print("\nNew Steam Grid Image Added")
