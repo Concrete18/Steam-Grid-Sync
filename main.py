@@ -1,5 +1,5 @@
 # standard library
-import os, configparser
+import os, subprocess, configparser
 from pathlib import Path
 
 # third-party imports
@@ -9,7 +9,7 @@ from rich.theme import Theme
 # local imports
 from utils.utils import *
 from utils.steam_image import Image
-from utils.action_picker import ActionPicker
+from utils.action_picker import action_picker
 from utils.add_image import add_image
 
 # rich console
@@ -29,7 +29,7 @@ custom_theme = Theme(
 console = Console(theme=custom_theme)
 
 
-class SteamGrid(ActionPicker):
+class SteamGrid:
 
     cfg = configparser.ConfigParser()
     cfg.read("config.ini")
@@ -166,6 +166,11 @@ class SteamGrid(ActionPicker):
                 break
         self.sync()
 
+    @staticmethod
+    def open_folder(folder: Path) -> None:
+        print(f"\nOpening Directory | {folder}")
+        subprocess.Popen(f'explorer "{folder}"')
+
     def game_library_actions(self) -> None:
         """
         Gives a choice of actions for the current game library.
@@ -181,7 +186,7 @@ class SteamGrid(ActionPicker):
             ("Open Custom Grid Image Folder", open_custom_grid_folder),
             ("Open Steam Grid Image Folder", open_steam_grid_folder),
         ]
-        self.pick_task(choices)
+        action_picker(choices)
         exit()
 
     def main(self):
@@ -194,4 +199,6 @@ class SteamGrid(ActionPicker):
 
 if __name__ == "__main__":
     grid = SteamGrid()
-    grid.main()
+    # grid.main()
+
+    grid.add_images()
