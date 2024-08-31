@@ -199,6 +199,4 @@ class SteamGrid:
 
 if __name__ == "__main__":
     grid = SteamGrid()
-    # grid.main()
-
-    grid.add_images()
+    grid.main()
