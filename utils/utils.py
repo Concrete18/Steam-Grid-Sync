@@ -15,5 +15,5 @@ def ask_for_yes_or_no(msg=""):
     """
     ph
     """
-    response = input(f"{msg}\n")
+    response = input(msg)
     return response.lower() in ["yes", "y"]
