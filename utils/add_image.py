@@ -7,14 +7,16 @@ from tkinter import filedialog
 # third-party imports
 from pick import pick
 
-# local imports
-from utils.action_picker import advanced_picker
-
 
 def get_file_path() -> Path:
+    """
+    ph
+    """
     root = tk.Tk()
-    root.withdraw()  # Hide the root window
+    root.withdraw()
     file_path = filedialog.askopenfilename(title="Select a file")
+    if file_path == ".":
+        return False
     return Path(file_path)
 
 
@@ -38,6 +40,9 @@ def add_image(custom_grid_image_dir: Path) -> None:
     ph
     """
     target = get_file_path()
+    if not target:
+        return
+
     steam_url = input("\nWhat is the Steam Game URL?\n")
 
     IMAGE_TYPES = ["Grid", "Hero", "Logo", "Active"]

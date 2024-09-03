@@ -177,11 +177,10 @@ class SteamGrid:
         """
         open_custom_grid_folder = lambda: self.open_folder(self.custom_grid_path)
         open_steam_grid_folder = lambda: self.open_folder(self.steam_grid_path)
-        add_image_to_custom = lambda: add_image(self.custom_grid_path)
 
         choices = [
             ("Exit", exit),
-            ("Add New Steam Grid Image", add_image_to_custom),
+            ("Add New Steam Grid Image", self.add_images),
             ("Rerun Sync", self.sync),
             ("Open Custom Grid Image Folder", open_custom_grid_folder),
             ("Open Steam Grid Image Folder", open_steam_grid_folder),
