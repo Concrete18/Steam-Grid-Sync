@@ -8,7 +8,7 @@ from utils.utils import *
 
 
 @dataclass
-class Image:
+class SteamImage:
     path: Path
     steam_grid_path: Path
     name: str = field(default_factory=str)
@@ -54,7 +54,7 @@ class Image:
             string = "Image(\n  Invalid\n)"
         return string
 
-    def create_destination(self) -> Path:
+    def create_destination(self) -> Path | None:
         """
         Creates the new filename for the Steam Grid image so it is ready to be used by the Steam App.
         """
@@ -71,7 +71,7 @@ class Image:
                 return None
         return self.steam_grid_path / Path(filename)
 
-    def hash(self) -> int:
+    def hash(self) -> str:
         """
         Returns the images sha256 hash.
         """
@@ -85,7 +85,7 @@ class Image:
 
     def exists(self) -> bool:
         """
-        Whether this path exists.
+        Returns True if this Steam Image already exists in the Steam folder.
         """
         return self.path.exists()
 
