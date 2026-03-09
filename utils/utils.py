@@ -1,7 +1,9 @@
+# standard library
+from pathlib import Path
 import hashlib, os
 
 
-def hash_file(file_path: str) -> str:
+def hash_file(file_path: Path) -> str:
     """
     Returns the images sha256 hash.
     """
