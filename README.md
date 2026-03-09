@@ -7,7 +7,7 @@
 It will contain your images in the following format.
 
 ```py
-{game name}_{grid or active or hero or logo}_{game appid}
+{game name}_{grid, active, hero or logo}_{game appid}
 ```
 
 #### Example:
