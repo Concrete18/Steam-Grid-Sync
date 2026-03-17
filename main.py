@@ -183,8 +183,20 @@ class SteamGrid:
         action_picker(choices)
         exit()
 
-    def main(self):
+    def intro(self):
         console.print("Steam Grid Sync", style="prim")
+        app_ids = set()
+        total_images = 0
+        for image in os.listdir(self.custom_grid_path):
+            image_path = Path(image)
+            app_id = image_path.name.split("_")[-1]
+            app_ids.add(app_id)
+            total_images += 1
+        stats = f"\nTotal Games: {len(app_ids)}\nTotal Images: {total_images}"
+        console.print(stats)
+
+    def main(self):
+        self.intro()
         try:
             self.game_library_actions()
         except EOFError or KeyboardInterrupt:

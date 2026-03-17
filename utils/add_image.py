@@ -51,6 +51,7 @@ def create_filename(steam_url: str, image_type: str, suffix: str) -> str:
         game_name = url_parts[5].replace("_", " ").title()
     else:
         game_name = input("What is the game's name?\n")
+    game_name = game_name.replace("_", " ")
     app_id = url_parts[4]
     return f"{game_name}_{image_type}_{app_id}{suffix}"
 
